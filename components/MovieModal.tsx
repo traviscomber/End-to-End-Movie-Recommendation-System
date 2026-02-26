@@ -1,4 +1,7 @@
+'use client';
+
 import { useEffect } from 'react';
+import { getTubiLink, getIMDbLink } from '@/lib/movies';
 
 interface Movie {
   movie_title: string;
@@ -27,6 +30,9 @@ export default function MovieModal({ movie, onClose }: MovieModalProps) {
   const cast = [movie.actor_1_name, movie.actor_2_name, movie.actor_3_name]
     .filter(Boolean)
     .join(', ') || 'N/A';
+
+  const tubiLink = getTubiLink(movie.movie_title);
+  const imdbLink = getIMDbLink(movie.movie_title);
 
   return (
     <>
@@ -91,10 +97,26 @@ export default function MovieModal({ movie, onClose }: MovieModalProps) {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-3 pt-4">
+            <div className="flex gap-3 pt-4 flex-col sm:flex-row">
+              <a
+                href={tubiLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold text-center transition"
+              >
+                Watch on Tubi
+              </a>
+              <a
+                href={imdbLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 px-6 py-3 bg-yellow-600 hover:bg-yellow-700 rounded-lg font-semibold text-center transition"
+              >
+                View on IMDb
+              </a>
               <button
                 onClick={onClose}
-                className="flex-1 px-6 py-3 bg-primary hover:bg-primary-dark rounded-lg font-semibold"
+                className="flex-1 px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition"
               >
                 Close
               </button>
