@@ -30,6 +30,14 @@
       </div>
       <div id="details">
         <br/>
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+          <button class="btn btn-primary" id="favorite-btn" onclick="toggleFavorite('{{title}}', {title: '{{title}}', poster: '{{poster}}', rating: {{vote_average}}})">
+            ☆ Add to Favorites
+          </button>
+          <button class="btn btn-secondary" onclick="shareMovie('{{title}}')">
+            <i class="fa fa-share"></i> Share
+          </button>
+        </div>
         <br>
         <h6 id="overview" style="color:white;max-width: 85%">OVERVIEW: &nbsp;&nbsp;&nbsp;{{overview}}</h6>
         <h6 id="vote_average" style="color:white;">RATING: &nbsp;&nbsp;&nbsp;{{vote_average}}/10 ({{vote_count}} votes)</h6>
@@ -161,7 +169,39 @@
   
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
   <script type="text/javascript" src="{{url_for('static', filename='recommend.js')}}"></script>
+  <script type="text/javascript" src="{{url_for('static', filename='favorites.js')}}"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+  <script>
+    // Share movie functionality
+    function shareMovie(title) {
+      const text = `Check out ${title} on Movie Finder!`;
+      if (navigator.share) {
+        navigator.share({
+          title: 'Movie Finder',
+          text: text,
+        }).catch(err => console.error('Error sharing:', err));
+      } else {
+        // Fallback: copy to clipboard
+        const url = window.location.href;
+        const shareText = `${text}\n${url}`;
+        navigator.clipboard.writeText(shareText).then(() => {
+          showNotification('Movie link copied to clipboard!');
+        }).catch(err => console.error('Error copying:', err));
+      }
+    }
+
+    // Check if movie is in favorites on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      const title = document.querySelector('#name').textContent.trim();
+      if (title && typeof favoritesManager !== 'undefined') {
+        const btn = document.getElementById('favorite-btn');
+        if (btn && favoritesManager.isFavorite(title)) {
+          btn.classList.add('active');
+          btn.innerHTML = '★ Added to Favorites';
+        }
+      }
+    });
+  </script>
 </body>
 </html>

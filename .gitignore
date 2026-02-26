@@ -152,11 +152,27 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
+# Project specific
 /main_data.csv
-
 mvenv/
-
 .ipynb_checkpoints
+app.log
+logs/
+*.bak
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can

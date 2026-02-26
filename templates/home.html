@@ -16,30 +16,176 @@
 </head>
 
 <body id="content" style="font-family: 'Noto Sans JP', sans-serif;">
-	<div class="ml-container" style="display: block;">
-    <center><h1 style=""> Movie Recommendation System</h1></center>
-    <div class="form-group shadow-textarea" style="margin-top: 30px;text-align: center;color: white;">
-        <input type="text" name="movie" class="movie form-control" id="autoComplete" autocomplete="off" placeholder="Enter the Movie Name" style="background-color: #ffffff;border-color:#ffffff;width: 60%;color: #181818" required="required" />
-        <br>
+	<div class="ml-container">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+      <h1 style="margin: 0;">🎬 Movie Finder</h1>
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <button class="btn btn-secondary" onclick="showFavorites()" id="favorites-toggle">
+          <i class="fa fa-heart"></i> My Favorites
+        </button>
+        <button class="btn btn-secondary" onclick="showHistory()" id="history-toggle">
+          <i class="fa fa-clock-o"></i> History
+        </button>
+      </div>
     </div>
 
-    <div class="form-group" style="text-align: center;">
-      <button class="btn btn-primary btn-block movie-button" style="background-color: #e50914;text-align: center;border-color: #e50914;width:120px;" disabled="true" >Enter</button><br><br>
+    <!-- Search Section -->
+    <div class="form-group shadow-textarea" style="margin-top: 2rem; text-align: center; color: white;">
+      <label style="display: block; text-align: left; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-secondary);">Search for a Movie</label>
+      <input type="text" name="movie" class="movie form-control" id="autoComplete" autocomplete="off" placeholder="Enter the Movie Name" style="background-color: var(--background-secondary); border-color: var(--border); width: 100%; color: var(--text-primary); margin-bottom: 1rem;" required="required" />
+      <button class="btn btn-primary movie-button" style="background-color: var(--primary); border-color: var(--primary); width: auto; margin: 0 auto; display: block;" disabled="true" >
+        <i class="fa fa-search"></i> Search
+      </button>
+      <br>
+    </div>
+
+    <!-- Filter Section (Optional) -->
+    <div style="margin-top: 2rem; padding: 1.5rem; background-color: rgba(0, 0, 0, 0.2); border-radius: 0.75rem; border: 1px solid var(--border);">
+      <h5 style="margin-bottom: 1rem; color: var(--text-primary);">Quick Tips</h5>
+      <ul style="list-style: none; padding: 0; color: var(--text-secondary);">
+        <li style="margin-bottom: 0.5rem;"><i class="fa fa-check" style="color: var(--primary); margin-right: 0.5rem;"></i> Type at least 2 characters to see suggestions</li>
+        <li style="margin-bottom: 0.5rem;"><i class="fa fa-check" style="color: var(--primary); margin-right: 0.5rem;"></i> Select from the dropdown or type the exact movie name</li>
+        <li style="margin-bottom: 0.5rem;"><i class="fa fa-check" style="color: var(--primary); margin-right: 0.5rem;"></i> View recommendations, cast details, and user reviews</li>
+        <li style="margin-bottom: 0;"><i class="fa fa-check" style="color: var(--primary); margin-right: 0.5rem;"></i> Add your favorite movies to your personal list</li>
+      </ul>
     </div>
 	</div>
 
+  <!-- Error Message -->
   <div class="fail">
-    <center><h3>Sorry! The Requested Movie is not in our Database</h3></center>
+    <center>
+      <h3 style="color: var(--error);">Sorry! The Requested Movie is not in our Database</h3>
+      <p style="color: var(--text-secondary); margin-top: 1rem;">Try searching for another movie or check the spelling</p>
+    </center>
   </div>
 
+  <!-- Results Container -->
 	<div class="results">
     <center>
       <h2 id="name" class="text-uppercase"></h2>
     </center>
 	</div>
+
+  <!-- Favorites View -->
+  <div id="favorites-view" style="display: none; margin-top: 2rem;">
+    <div class="ml-container">
+      <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+        <button class="btn btn-secondary" onclick="hideFavorites()">
+          <i class="fa fa-arrow-left"></i> Back to Search
+        </button>
+        <button class="btn btn-danger" onclick="clearAllFavorites()" style="margin-left: auto;">
+          <i class="fa fa-trash"></i> Clear All
+        </button>
+      </div>
+      <h2 style="margin-bottom: 2rem;">My Favorite Movies</h2>
+      <div id="favorites-container"></div>
+    </div>
+  </div>
+
+  <!-- History View -->
+  <div id="history-view" style="display: none; margin-top: 2rem;">
+    <div class="ml-container">
+      <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+        <button class="btn btn-secondary" onclick="hideHistory()">
+          <i class="fa fa-arrow-left"></i> Back to Search
+        </button>
+        <button class="btn btn-danger" onclick="clearAllHistory()" style="margin-left: auto;">
+          <i class="fa fa-trash"></i> Clear History
+        </button>
+      </div>
+      <h2 style="margin-bottom: 2rem;">Search History</h2>
+      <div id="history-container"></div>
+    </div>
+  </div>
+
 	<script src="https://cdn.jsdelivr.net/npm/@tarekraafat/autocomplete.js@7.2.0/dist/js/autoComplete.min.js"></script>
   <script type="text/javascript" src="{{url_for('static', filename='autocomplete.js')}}"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
   <script type="text/javascript" src="{{url_for('static', filename='recommend.js')}}"></script>
+  <script type="text/javascript" src="{{url_for('static', filename='favorites.js')}}"></script>
+  <script>
+    // View toggling functions
+    function showFavorites() {
+      document.getElementById('favorites-view').style.display = 'block';
+      document.querySelector('.ml-container').style.display = 'none';
+      document.querySelector('.results').style.display = 'none';
+      document.querySelector('.fail').style.display = 'none';
+      displayFavorites();
+    }
+
+    function hideFavorites() {
+      document.getElementById('favorites-view').style.display = 'none';
+      document.querySelector('.ml-container').style.display = 'block';
+      document.querySelector('.results').style.display = 'none';
+      document.querySelector('.fail').style.display = 'none';
+    }
+
+    function showHistory() {
+      document.getElementById('history-view').style.display = 'block';
+      document.querySelector('.ml-container').style.display = 'none';
+      document.querySelector('.results').style.display = 'none';
+      document.querySelector('.fail').style.display = 'none';
+      displayHistory();
+    }
+
+    function hideHistory() {
+      document.getElementById('history-view').style.display = 'none';
+      document.querySelector('.ml-container').style.display = 'block';
+      document.querySelector('.results').style.display = 'none';
+      document.querySelector('.fail').style.display = 'none';
+    }
+
+    function displayHistory() {
+      const history = watchHistory.getHistory();
+      const container = document.getElementById('history-container');
+      
+      if (history.length === 0) {
+        container.innerHTML = '<p class="text-center" style="color: var(--text-secondary); padding: var(--spacing-xl);">No search history yet</p>';
+        return;
+      }
+
+      let html = '<ul style="list-style: none; padding: 0;">';
+      history.forEach((movie, index) => {
+        html += `
+          <li style="padding: 1rem; background-color: rgba(0, 0, 0, 0.2); border-radius: 0.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+            <span style="cursor: pointer; flex-grow: 1;" onclick="searchMovieFromHistory('${movie}')">${index + 1}. ${movie}</span>
+            <button class="btn btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;" onclick="removeFromHistory('${movie}')">Remove</button>
+          </li>
+        `;
+      });
+      html += '</ul>';
+      container.innerHTML = html;
+    }
+
+    function removeFromHistory(title) {
+      watchHistory.history = watchHistory.history.filter(h => h !== title);
+      watchHistory.saveHistory();
+      displayHistory();
+    }
+
+    function clearAllHistory() {
+      if (confirm('Are you sure you want to clear your entire search history?')) {
+        watchHistory.clearHistory();
+        displayHistory();
+        showNotification('History cleared');
+      }
+    }
+
+    function clearAllFavorites() {
+      if (confirm('Are you sure you want to remove all favorites?')) {
+        favoritesManager.clearAllFavorites();
+        displayFavorites();
+        showNotification('All favorites removed');
+      }
+    }
+
+    function searchMovieFromHistory(movie) {
+      document.getElementById('autoComplete').value = movie;
+      const button = document.querySelector('.movie-button');
+      button.click();
+      hideHistory();
+    }
+  </script>
 </body>
 </html>

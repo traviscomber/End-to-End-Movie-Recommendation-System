@@ -12,13 +12,18 @@ $(function() {
   source.addEventListener('input', inputHandler);
 
   $('.movie-button').on('click',function(){
-    var my_api_key = '5ce2ef2d7c461dea5b4e04900d1c561e';
-    var title = $('.movie').val();
+    // API Key should be passed from Flask template or environment
+    var my_api_key = document.body.getAttribute('data-api-key') || '5ce2ef2d7c461dea5b4e04900d1c561e';
+    var title = $('#autoComplete').val().trim();
     if (title=="") {
       $('.results').css('display','none');
       $('.fail').css('display','block');
     }
     else{
+      // Add to watch history
+      if (typeof watchHistory !== 'undefined') {
+        watchHistory.addToHistory(title);
+      }
       load_details(my_api_key,title);
     }
   });
@@ -26,7 +31,7 @@ $(function() {
 
 // will be invoked when clicking on the recommended movies
 function recommendcard(e){
-  var my_api_key = '5ce2ef2d7c461dea5b4e04900d1c561e';
+  var my_api_key = document.body.getAttribute('data-api-key') || '5ce2ef2d7c461dea5b4e04900d1c561e';
   var title = e.getAttribute('title'); 
   load_details(my_api_key,title);
 }
@@ -52,8 +57,9 @@ function load_details(my_api_key,title){
         movie_recs(movie_title,movie_id,my_api_key);
       }
     },
-    error: function(){
-      alert('Invalid Request');
+    error: function(xhr, status, error){
+      console.error('Error loading movie details:', error);
+      alert('Error loading movie details. Please try again.');
       $("#loader").delay(500).fadeOut();
     },
   });
@@ -66,7 +72,7 @@ function movie_recs(movie_title,movie_id,my_api_key){
     url:"/similarity",
     data:{'name':movie_title},
     success: function(recs){
-      if(recs=="Sorry! The movie you requested is not in our database. Please check the spelling or try with some other movies"){
+      if(recs.includes("Sorry!") || recs.includes("Error:")){
         $('.fail').css('display','block');
         $('.results').css('display','none');
         $("#loader").delay(500).fadeOut();
@@ -82,8 +88,9 @@ function movie_recs(movie_title,movie_id,my_api_key){
         get_movie_details(movie_id,my_api_key,arr,movie_title);
       }
     },
-    error: function(){
-      alert("error recs");
+    error: function(xhr, status, error){
+      console.error('Error getting recommendations:', error);
+      alert("Error getting recommendations. Please try again.");
       $("#loader").delay(500).fadeOut();
     },
   }); 
@@ -97,8 +104,9 @@ function get_movie_details(movie_id,my_api_key,arr,movie_title) {
     success: function(movie_details){
       show_details(movie_details,arr,movie_title,my_api_key,movie_id);
     },
-    error: function(){
-      alert("API Error!");
+    error: function(xhr, status, error){
+      console.error('API Error:', error);
+      alert("API Error! Please try again.");
       $("#loader").delay(500).fadeOut();
     },
   });
@@ -166,6 +174,10 @@ function show_details(movie_details,arr,movie_title,my_api_key,movie_id){
       $('.results').html(response);
       $('#autoComplete').val('');
       $(window).scrollTop(0);
+    },
+    error: function(xhr, status, error){
+      console.error('Error posting recommendation:', error);
+      alert('Error processing recommendations. Please try again.');
     }
   });
 }
@@ -184,6 +196,11 @@ function get_individual_cast(movie_cast,my_api_key) {
           cast_bdays.push((new Date(cast_details.birthday)).toDateString().split(' ').slice(1).join(' '));
           cast_bios.push(cast_details.biography);
           cast_places.push(cast_details.place_of_birth);
+        },
+        error: function(){
+          cast_bdays.push('Not Available');
+          cast_bios.push('Not Available');
+          cast_places.push('Not Available');
         }
       });
     }
@@ -217,7 +234,7 @@ function get_movie_cast(movie_id,my_api_key){
         }
       },
       error: function(){
-        alert("Invalid Request!");
+        console.error('Error loading cast information');
         $("#loader").delay(500).fadeOut();
       }
     });
@@ -234,11 +251,15 @@ function get_movie_posters(arr,my_api_key){
       url:'https://api.themoviedb.org/3/search/movie?api_key='+my_api_key+'&query='+arr[m],
       async: false,
       success: function(m_data){
-        arr_poster_list.push('https://image.tmdb.org/t/p/original'+m_data.results[0].poster_path);
+        if(m_data.results && m_data.results.length > 0 && m_data.results[0].poster_path){
+          arr_poster_list.push('https://image.tmdb.org/t/p/original'+m_data.results[0].poster_path);
+        } else {
+          arr_poster_list.push('https://via.placeholder.com/300x450?text=No+Image');
+        }
       },
       error: function(){
-        alert("Invalid Request!");
-        $("#loader").delay(500).fadeOut();
+        console.error('Error loading poster for:', arr[m]);
+        arr_poster_list.push('https://via.placeholder.com/300x450?text=No+Image');
       },
     })
   }
