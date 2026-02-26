@@ -263,6 +263,78 @@ def categories():
         logger.info("Loading categories page")
         return render_template('categories.html')
 
+@app.route("/api/categories-and-trending", methods=["GET"])
+@handle_errors
+def get_categories_and_trending():
+    """Get both categories and trending movies in a single optimized call."""
+    try:
+        global data, similarity
+        if data is None or similarity is None:
+            data, similarity = create_similarity()
+        
+        logger.info("[v0] Fetching categories and trending in single call")
+        
+        # Default values
+        default_categories = ['Action', 'Drama', 'Comedy', 'Thriller', 'Sci-Fi', 'Horror', 'Romance', 'Adventure', 'B-Movies (Tubi)', 'Indie Gems']
+        categories = set(default_categories)
+        trending_movies = []
+        
+        # Extract categories from data
+        if data is not None and 'genres' in data.columns:
+            for movie_genres in data['genres']:
+                if isinstance(movie_genres, str):
+                    genres_list = [g.strip() for g in movie_genres.split() if g.strip()]
+                    categories.update(genres_list)
+        
+        # Calculate trending movies
+        if data is not None:
+            for idx, row in data.iterrows():
+                if len(trending_movies) >= 10:
+                    break
+                    
+                movie_title = row.get('movie_title', 'Unknown')
+                actors = sum(1 for i in range(1, 4) if pd.notna(row.get(f'actor_{i}_name')) and row.get(f'actor_{i}_name') != '')
+                has_director = 1 if pd.notna(row.get('director_name')) and row.get('director_name') != '' else 0
+                has_genres = 1 if pd.notna(row.get('genres')) and row.get('genres') != '' else 0
+                
+                score = (actors * 2 + (has_director * 2) + (has_genres * 2)) / 8
+                score = min(9.5, max(6.0, score))
+                
+                trending_movies.append({
+                    'movie_title': movie_title,
+                    'imdb_score': round(score, 1),
+                    'genres': str(row.get('genres', 'Unknown')),
+                    'director': str(row.get('director_name', 'Unknown'))
+                })
+        
+        sorted_categories = sorted(list(categories))
+        
+        result = {
+            'categories': sorted_categories if sorted_categories else default_categories,
+            'trending': trending_movies,
+            'cached': False,
+            'timestamp': str(pd.Timestamp.now())
+        }
+        
+        logger.info(f"[v0] Combined response: {len(result['categories'])} categories, {len(result['trending'])} trending movies")
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"[v0] Error in combined endpoint: {str(e)}", exc_info=True)
+        return jsonify({
+            'categories': ['Action', 'Drama', 'Comedy', 'Thriller', 'Sci-Fi', 'Horror', 'Romance', 'Adventure', 'B-Movies (Tubi)', 'Indie Gems'],
+            'trending': [],
+            'error': str(e)
+        }), 200
+
+@app.route("/categories")
+@handle_errors
+def categories():
+    """Display categories/genres page."""
+    with PerformanceMonitor("Load Categories Page"):
+        logger.info("Loading categories page")
+        return render_template('categories.html')
+
 @app.route("/api/categories", methods=["GET"])
 @handle_errors
 def get_categories():

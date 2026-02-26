@@ -159,87 +159,159 @@
 
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 	<script>
-		// Load categories on page load
+		// Data caching system
+		const DataCache = {
+			data: null,
+			timestamp: null,
+			ttl: 5 * 60 * 1000, // 5 minutes
+			
+			set(data) {
+				this.data = data;
+				this.timestamp = Date.now();
+				try {
+					localStorage.setItem('categoriesCache', JSON.stringify({data, timestamp: this.timestamp}));
+					console.log('[v0] Data cached:', {categories: data.categories.length, trending: data.trending.length});
+				} catch(e) {
+					console.warn('[v0] Cache write error:', e);
+				}
+			},
+			
+			get() {
+				if (!this.data) {
+					try {
+						const cached = JSON.parse(localStorage.getItem('categoriesCache'));
+						if (cached && (Date.now() - cached.timestamp < this.ttl)) {
+							this.data = cached.data;
+							this.timestamp = cached.timestamp;
+							console.log('[v0] Using cached data');
+							return this.data;
+						}
+					} catch(e) {
+						console.warn('[v0] Cache read error:', e);
+					}
+				}
+				return this.data;
+			},
+			
+			isValid() {
+				return this.data && (Date.now() - this.timestamp < this.ttl);
+			}
+		};
+
+		// Load categories and trending on page load
 		document.addEventListener('DOMContentLoaded', function() {
-			loadCategories();
-			loadTrending();
+			console.log('[v0] Page loaded, fetching categories and trending');
+			loadCategoriesAndTrending();
 		});
 
-		function loadCategories() {
-			fetch('/api/categories')
-				.then(response => response.json())
+		// Optimized combined data fetch
+		function loadCategoriesAndTrending() {
+			// Check cache first
+			if (DataCache.isValid()) {
+				console.log('[v0] Cache valid, using cached data');
+				const cached = DataCache.get();
+				loadCategoriesGrid(cached.categories);
+				loadTrendingGrid(cached.trending);
+				return;
+			}
+
+			console.log('[v0] Cache invalid or empty, fetching from server');
+			const startTime = performance.now();
+			
+			// Show loading state
+			document.getElementById('categoriesGrid').innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-secondary);">Loading categories...</div>';
+			document.getElementById('trendingGrid').innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-secondary);">Loading trending movies...</div>';
+
+			fetch('/api/categories-and-trending')
+				.then(response => {
+					if (!response.ok) throw new Error('Failed to fetch');
+					return response.json();
+				})
 				.then(data => {
-					const grid = document.getElementById('categoriesGrid');
-					grid.innerHTML = '';
+					const endTime = performance.now();
+					console.log('[v0] Data fetched in', (endTime - startTime).toFixed(2), 'ms');
+					console.log('[v0] Response:', {categories: data.categories.length, trending: data.trending.length});
 					
-					if (data.categories && data.categories.length > 0) {
-						data.categories.forEach(category => {
-							const card = document.createElement('div');
-							card.className = 'category-card';
-							
-							// Get icon for category
-							let icon = 'fa-tag';
-							const catLower = category.toLowerCase();
-							if (catLower.includes('action')) icon = 'fa-bomb';
-							else if (catLower.includes('comedy')) icon = 'fa-face-laugh';
-							else if (catLower.includes('horror')) icon = 'fa-skull';
-							else if (catLower.includes('romance')) icon = 'fa-heart';
-							else if (catLower.includes('drama')) icon = 'fa-masks-theater';
-							else if (catLower.includes('sci-fi')) icon = 'fa-rocket';
-							else if (catLower.includes('tubi') || catLower.includes('b-movie')) icon = 'fa-film';
-							else if (catLower.includes('indie') || catLower.includes('gems')) icon = 'fa-star';
-							
-							card.innerHTML = `
-								<div class="category-icon">
-									<i class="fas ${icon}"></i>
-								</div>
-								<div class="category-name">${category}</div>
-								<div class="category-count">Explore</div>
-							`;
-							card.onclick = () => viewGenre(category);
-							grid.appendChild(card);
-						});
-					} else {
-						grid.innerHTML = '<p style="color: var(--text-secondary); grid-column: 1/-1;">No categories found</p>';
-					}
+					// Cache the data
+					DataCache.set(data);
+					
+					// Display data
+					loadCategoriesGrid(data.categories);
+					loadTrendingGrid(data.trending);
 				})
 				.catch(error => {
-					console.error('Error loading categories:', error);
-					document.getElementById('categoriesGrid').innerHTML = '<p style="color: var(--error); grid-column: 1/-1;">Failed to load categories</p>';
+					console.error('[v0] Error loading data:', error);
+					document.getElementById('categoriesGrid').innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--error);">Failed to load categories</div>';
+					document.getElementById('trendingGrid').innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--error);">Failed to load trending movies</div>';
 				});
 		}
 
-		function loadTrending() {
-			fetch('/api/trending')
-				.then(response => response.json())
-				.then(data => {
-					const grid = document.getElementById('trendingGrid');
-					grid.innerHTML = '';
-					
-					if (data.trending && data.trending.length > 0) {
-						data.trending.forEach(movie => {
-							const card = document.createElement('div');
-							card.className = 'movie-card';
-							const movieTitle = movie.movie_title || movie.title || 'Unknown';
-							const rating = movie.imdb_score || movie.rating || 0;
-							card.innerHTML = `
-								<div class="movie-card-content">
-									<div class="movie-card-title">${movieTitle}</div>
-									<div class="movie-card-rating">
-										<i class="fas fa-star"></i> ${rating}/10
-									</div>
-								</div>
-							`;
-							grid.appendChild(card);
-						});
-					} else {
-						grid.innerHTML = '<p style="color: var(--text-secondary); grid-column: 1/-1;">No trending movies found</p>';
-					}
-				})
-				.catch(error => {
-					console.error('Error loading trending:', error);
-					document.getElementById('trendingGrid').innerHTML = '<p style="color: var(--error); grid-column: 1/-1;">Failed to load trending</p>';
-				});
+		// Load categories into grid
+		function loadCategoriesGrid(categories) {
+			const grid = document.getElementById('categoriesGrid');
+			grid.innerHTML = '';
+			
+			if (!categories || categories.length === 0) {
+				grid.innerHTML = '<p style="color: var(--text-secondary); grid-column: 1/-1;">No categories found</p>';
+				return;
+			}
+
+			categories.forEach(category => {
+				const card = document.createElement('div');
+				card.className = 'category-card';
+				
+				let icon = 'fa-tag';
+				const catLower = category.toLowerCase();
+				if (catLower.includes('action')) icon = 'fa-bomb';
+				else if (catLower.includes('comedy')) icon = 'fa-face-laugh';
+				else if (catLower.includes('horror')) icon = 'fa-skull';
+				else if (catLower.includes('romance')) icon = 'fa-heart';
+				else if (catLower.includes('drama')) icon = 'fa-masks-theater';
+				else if (catLower.includes('sci-fi')) icon = 'fa-rocket';
+				else if (catLower.includes('tubi') || catLower.includes('b-movie')) icon = 'fa-film';
+				else if (catLower.includes('indie') || catLower.includes('gems')) icon = 'fa-star';
+				
+				card.innerHTML = `
+					<div class="category-icon">
+						<i class="fas ${icon}"></i>
+					</div>
+					<div class="category-name">${category}</div>
+					<div class="category-count">Explore</div>
+				`;
+				card.onclick = () => viewGenre(category);
+				grid.appendChild(card);
+			});
+			
+			console.log('[v0] Categories displayed:', categories.length);
+		}
+
+		// Load trending into grid
+		function loadTrendingGrid(movies) {
+			const grid = document.getElementById('trendingGrid');
+			grid.innerHTML = '';
+			
+			if (!movies || movies.length === 0) {
+				document.querySelector('.trending-section').style.display = 'none';
+				return;
+			}
+
+			movies.forEach(movie => {
+				const card = document.createElement('div');
+				card.className = 'movie-card';
+				const movieTitle = movie.movie_title || movie.title || 'Unknown';
+				const rating = movie.imdb_score || movie.rating || 0;
+				card.innerHTML = `
+					<div class="movie-card-content">
+						<div class="movie-card-title">${movieTitle}</div>
+						<div class="movie-card-rating">
+							<i class="fas fa-star"></i> ${rating}/10
+						</div>
+					</div>
+				`;
+				grid.appendChild(card);
+			});
+			
+			console.log('[v0] Trending movies displayed:', movies.length);
 		}
 
 		function viewGenre(genre) {
@@ -252,7 +324,7 @@
 			// Get the main container
 			const container = document.querySelector('.ml-container');
 			
-			// Create movies display section (insert after header but before categories)
+			// Create movies display section
 			let moviesSection = document.getElementById('moviesSection');
 			if (!moviesSection) {
 				moviesSection = document.createElement('div');
@@ -266,7 +338,7 @@
 					<i class="fas fa-arrow-left"></i> Back to Categories
 				</button>
 				<h1 class="page-title" style="margin-bottom: 0.5rem;">
-					<i class="fas fa-film"></i> ${genre} Movies
+					<i class="fas fa-film"></i> ${genre}
 				</h1>
 				<div style="text-align: center; padding: 2rem;">
 					<div class="spinner-border text-primary"></div>
@@ -277,14 +349,9 @@
 			
 			// Fetch movies for this genre
 			fetch(`/api/movies-by-genre/${encodeURIComponent(genre)}`)
-				.then(response => {
-					console.log('[v0] Response status:', response.status);
-					return response.json();
-				})
+				.then(response => response.json())
 				.then(data => {
-					console.log('[v0] Full API response:', data);
-					console.log('[v0] Movies array:', data.movies);
-					console.log('[v0] Movies count:', data.movies ? data.movies.length : 0);
+					console.log('[v0] Loaded movies:', data.movies ? data.movies.length : 0);
 					
 					if (data.movies && data.movies.length > 0) {
 						displayGenreMovies(moviesSection, genre, data.movies, data.source);
@@ -305,7 +372,7 @@
 							<i class="fas fa-arrow-left"></i> Back to Categories
 						</button>
 						<h1 class="page-title">${genre}</h1>
-						<p style="text-align: center; color: var(--error); padding: 2rem;">Error loading movies: ${error.message}</p>
+						<p style="text-align: center; color: var(--error); padding: 2rem;">Error loading movies. Please try again.</p>
 					`;
 				});
 		}
@@ -327,7 +394,7 @@
 				<h1 class="page-title" style="margin-bottom: 0.5rem;">
 					<i class="fas fa-film"></i> ${genre}
 				</h1>
-				<p style="text-align: center; color: var(--text-secondary); margin-bottom: 2rem;">Found ${movies.length} movies from ${source || 'Database'}</p>
+				<p style="text-align: center; color: var(--text-secondary); margin-bottom: 2rem;">Found ${movies.length} movies</p>
 				<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1.5rem;">
 			`;
 			
@@ -335,8 +402,6 @@
 				const title = movie.title || movie.movie_title || 'Unknown Movie';
 				const rating = movie.rating || movie.imdb_score || 0;
 				const movieSource = movie.source || source || 'Database';
-				
-				console.log('[v0] Movie', index, ':', {title, rating, source: movieSource});
 				
 				html += `
 					<div style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(229, 9, 20, 0.2); border-radius: 0.75rem; overflow: hidden; transition: all 0.3s ease; display: flex; flex-direction: column; cursor: pointer;" 
@@ -364,67 +429,9 @@
 			container.innerHTML = html;
 			console.log('[v0] Display completed with', movies.length, 'movies');
 		}
-				})
-				.catch(error => {
-					console.error('[v0] Error loading movies:', error);
-					container.innerHTML = `
-						<button class="btn btn-secondary" style="margin-top: 1rem;" onclick="location.reload()">
-							<i class="fas fa-home"></i> Back to Categories
-						</button>
-						<h1 class="page-title">${genre}</h1>
-						<p style="text-align: center; color: var(--error); padding: 2rem;">Error loading movies. Please try again.</p>
-					`;
-				});
-		}
-
-		function displayGenreMovies(genre, movies, source) {
-			const container = document.querySelector('.ml-container');
-			let html = `
-				<button class="btn btn-secondary" style="margin-top: 1rem; margin-bottom: 1rem;" onclick="location.reload()">
-					<i class="fas fa-arrow-left"></i> Back to Categories
-				</button>
-				<h1 class="page-title" style="margin-bottom: 0.5rem;">
-					<i class="fas fa-film"></i> ${genre} Movies
-				</h1>
-				<p style="text-align: center; color: var(--text-secondary); margin-bottom: 2rem;">Found ${movies.length} movies from ${source || 'Database'}</p>
-				<div class="movie-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1.5rem;">
-			`;
-			
-			movies.forEach((movie, index) => {
-				const title = movie.title || movie.movie_title || 'Unknown Movie';
-				const rating = movie.rating || movie.imdb_score || 0;
-				const movieSource = movie.source || source || 'Database';
-				
-				console.log('[v0] Movie', index, ':', {title, rating, source: movieSource});
-				
-				html += `
-					<div class="movie-card" style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(229, 9, 20, 0.2); border-radius: 0.75rem; overflow: hidden; transition: all 0.3s ease; display: flex; flex-direction: column;">
-						<div style="width: 100%; aspect-ratio: 2/3; background: linear-gradient(135deg, rgba(229, 9, 20, 0.3), rgba(229, 9, 20, 0.1)); display: flex; align-items: center; justify-content: center; font-size: 3rem; color: var(--text-secondary);">
-							🎬
-						</div>
-						<div style="padding: 1rem; display: flex; flex-direction: column; flex-grow: 1;">
-							<div style="color: var(--text-primary); font-weight: 600; font-size: 0.9rem; line-height: 1.3; margin-bottom: 0.5rem; word-break: break-word;">
-								${title}
-							</div>
-							<div style="color: var(--primary); font-weight: 700; font-size: 0.95rem; margin-bottom: 0.5rem;">
-								★ ${parseFloat(rating).toFixed(1)}/10
-							</div>
-							<div style="color: var(--text-secondary); font-size: 0.75rem;">
-								${movieSource}
-							</div>
-						</div>
-					</div>
-				`;
-			});
-			
-			html += '</div>';
-			container.innerHTML = html;
-			console.log('[v0] Display completed with', movies.length, 'movies');
-		}
 	</script>
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
 	<script type="text/javascript" src="{{url_for('static', filename='utils.js')}}"></script>
-	<script type="text/javascript" src="{{url_for('static', filename='categories.js')}}"></script>
 </body>
 </html>
