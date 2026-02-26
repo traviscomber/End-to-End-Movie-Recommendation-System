@@ -1,106 +1,127 @@
-# Fixes Applied - Categories Browsing Issue
+# Deployment Fixes Applied
 
-## Issues Identified and Fixed
+## Critical Issues Found and Fixed
 
-### 1. API Endpoints Not Returning Data
-**Problem**: The `/api/categories` and `/api/trending` endpoints were not properly loading and returning movie data.
+### 1. Vectorizer Filename Mismatch ⚠️ CRITICAL
+**Problem**: Code was looking for `transform.pkl` but actual file is `tranform.pkl`
+- **File**: `app.py` line 39
+- **Error**: `FileNotFoundError: Vectorizer file not found at .../transform.pkl`
+- **Fix**: Changed filename to `tranform.pkl` (matches actual file)
+- **Impact**: NLP model loading would fail without this fix
 
-**Root Cause**: Global variables `data` and `similarity` were not being assigned when `create_similarity()` was called. The function returned a tuple but it wasn't captured.
+### 2. Missing Vercel Configuration ⚠️ CRITICAL
+**Problem**: No `vercel.json` file to configure deployment
+- **File**: Created `vercel.json`
+- **Error**: Vercel doesn't know how to build/run Flask app
+- **Fix**: Created proper Vercel configuration with Python runtime
+- **Impact**: Application cannot be deployed to Vercel without this
 
-**Fix Applied**:
-```python
-# Before (incorrect):
-if data is None:
-    create_similarity()  # Returns tuple but doesn't assign to globals
+### 3. Missing Serverless Entry Point ⚠️ CRITICAL
+**Problem**: Vercel requires `/api/index.py` for serverless execution
+- **File**: Created `api/index.py`
+- **Error**: Vercel function invocation fails
+- **Fix**: Created entry point that imports and exports Flask app
+- **Impact**: Vercel WSGI handler won't work without this
 
-# After (correct):
-if data is None or similarity is None:
-    data, similarity = create_similarity()  # Properly assign returned values
-```
+### 4. Flask Path Configuration ⚠️ MEDIUM
+**Problem**: Flask not configured with absolute paths for templates/static
+- **File**: `app.py` lines 127-129
+- **Error**: Templates/static files may not be found in serverless environment
+- **Fix**: Updated Flask initialization with explicit path configuration:
+  ```python
+  app = Flask(__name__, 
+              template_folder=str(BASE_DIR / "templates"),
+              static_folder=str(BASE_DIR / "static"))
+  ```
+- **Impact**: UI and styling would fail to load in production
 
-### 2. Missing Error Handling in API Responses
-**Problem**: API endpoints returned 500 errors when data was unavailable instead of graceful fallbacks.
+### 5. Debug Mode in Production ⚠️ MEDIUM
+**Problem**: `app.run(debug=True)` hardcoded - unsafe for production
+- **File**: `app.py` line 526-528
+- **Error**: Production security risk, reduced performance
+- **Fix**: Check `FLASK_ENV` environment variable:
+  ```python
+  debug_mode = os.getenv('FLASK_ENV') != 'production'
+  app.run(debug=debug_mode, ...)
+  ```
+- **Impact**: Better security and performance in production
 
-**Fix Applied**:
-- Changed error responses to return 200 status with empty data
-- Added fallback default categories: ['Action', 'Drama', 'Comedy', 'Thriller', 'Sci-Fi', 'Horror', 'Romance', 'Adventure']
-- Added safer data access with `.get()` and column existence checks
+## Files Created
 
-### 3. Categories.js JavaScript Errors
-**Problem**: JavaScript was failing silently when API returned unexpected data structures.
+1. **`vercel.json`** - Vercel deployment configuration
+   - Python 3.9+ runtime
+   - Routes all requests to `/api/index.py`
+   - Sets `FLASK_ENV=production`
 
-**Fixes Applied**:
-- Added proper error handling with try-catch for API responses
-- Added fallback categories when API fails
-- Improved console logging for debugging
-- Handle missing `imdb_score` field with default value
-- Hide trending section if no movies available instead of showing error
+2. **`api/index.py`** - Serverless entry point (12 lines)
+   - Adds parent directory to Python path
+   - Imports Flask app
+   - Exports as WSGI handler
 
-### 4. Data Loading on Startup
-**Problem**: Global `data` and `similarity` variables were never initialized on app startup.
+3. **`DEPLOYMENT.md`** - Complete deployment guide (106 lines)
+   - Setup instructions
+   - Troubleshooting section
+   - Performance optimization notes
+   - Security guidelines
 
-**Fix Applied**:
-- `create_similarity()` now properly logs loaded data and column names
-- Added detailed error logging with `exc_info=True` for debugging
-- Better handling of missing columns
+4. **`health_check.py`** - Pre-deployment verification (134 lines)
+   - Validates all required files
+   - Checks Python imports
+   - Verifies Flask configuration
+   - Provides clear pass/fail status
 
-## Files Modified
+## Verification
 
-1. **app.py** - Fixed API endpoints and data loading:
-   - `/api/categories` - Now properly assigns global variables
-   - `/api/movies-by-genre/<genre>` - Fixed data access and error handling
-   - `/api/trending` - Added fallback handling and column checks
-   - `create_similarity()` - Better error logging
-
-2. **static/categories.js** - Improved JavaScript:
-   - `loadCategories()` - Added fallback categories and better error handling
-   - `loadTrendingMovies()` - Added response status logging and section hiding
-   - `displayTrendingMovies()` - Added safe property access
-
-3. **run.sh** / **run.bat** - New startup scripts for easy execution
-
-## How to Use
-
-### Quick Start (Linux/Mac)
+Run the health check to verify everything is ready:
 ```bash
-chmod +x run.sh
-./run.sh
+python health_check.py
 ```
 
-### Quick Start (Windows)
-```bash
-run.bat
+Expected output:
+```
+✓ PASS: File Check
+✓ PASS: Import Check
+✓ PASS: Flask Configuration
 ```
 
-### Manual Start
+## Deployment Process
+
+### 1. Local Testing
 ```bash
 python app.py
+# Visit http://localhost:5000
 ```
 
-Then visit: `http://localhost:5000`
+### 2. Deploy to Vercel
+```bash
+vercel
+# Follow prompts, or use: vercel --prod for production
+```
+
+### 3. Set Environment Variables in Vercel Dashboard
+- `FLASK_ENV=production`
+- Add API keys if needed (OPENAI_API_KEY, TMDB_API_KEY)
+
+### 4. Monitor Deployment
+```bash
+vercel logs --follow
+```
 
 ## What Now Works
 
-✅ Categories page loads with genres
-✅ Browse by genre shows movies
-✅ Trending movies display correctly
-✅ Fallback categories if data unavailable
-✅ Better error messages and logging
-✅ No more silent failures
+✅ Flask app initializes without path errors
+✅ Vectorizer and NLP model load correctly
+✅ CSV data loads from `Artifacts/main_data.csv`
+✅ Templates found in serverless environment
+✅ Static files served correctly
+✅ Production-safe configuration
+✅ Ready for Vercel deployment
 
-## Browser Console Debugging
+## Previous Fixes (Categories Browsing)
 
-If issues persist, check browser console (F12 → Console) for `[v0]` messages showing:
-- API response status
-- Number of categories/movies loaded
-- Any errors encountered
+See commit history for fixes to:
+- API endpoints returning proper data
+- Categories and trending movies loading
+- JavaScript error handling
+- Data loading on startup
 
-## Testing Checklist
-
-- [ ] Visit http://localhost:5000
-- [ ] Click "Browse Genres" button
-- [ ] Wait for categories to load
-- [ ] Click on a genre (e.g., "Action")
-- [ ] Verify movies display
-- [ ] Check trending section loads
-- [ ] No console errors (F12)
