@@ -122,7 +122,88 @@
 			color: var(--primary);
 			font-size: 0.85rem;
 		}
-	</style>
+
+		.search-section {
+			background: rgba(229, 9, 20, 0.1);
+			border: 1px solid rgba(229, 9, 20, 0.2);
+			border-radius: 1rem;
+			padding: 2rem;
+			margin-bottom: 3rem;
+			margin-top: 2rem;
+		}
+
+		.search-container {
+			display: flex;
+			gap: 1rem;
+			max-width: 600px;
+			margin: 0 auto;
+		}
+
+		.search-input {
+			flex: 1;
+			background: rgba(20, 20, 20, 0.8);
+			border: 1px solid rgba(229, 9, 20, 0.3);
+			border-radius: 0.5rem;
+			padding: 0.75rem 1rem;
+			color: var(--text-primary);
+			font-size: 1rem;
+			transition: all 0.3s;
+		}
+
+		.search-input:focus {
+			outline: none;
+			border-color: var(--primary);
+			box-shadow: 0 0 10px rgba(229, 9, 20, 0.3);
+			background: rgba(20, 20, 20, 0.95);
+		}
+
+		.search-input::placeholder {
+			color: var(--text-secondary);
+		}
+
+		.search-btn {
+			background: var(--primary);
+			color: white;
+			border: none;
+			border-radius: 0.5rem;
+			padding: 0.75rem 1.5rem;
+			font-weight: 600;
+			cursor: pointer;
+			transition: all 0.3s;
+		}
+
+		.search-btn:hover {
+			background: #e50819;
+			transform: translateY(-2px);
+			box-shadow: 0 5px 15px rgba(229, 9, 20, 0.4);
+		}
+
+		#searchResults {
+			display: none;
+			margin-top: 3rem;
+			padding-top: 2rem;
+			border-top: 1px solid rgba(229, 9, 20, 0.2);
+		}
+
+		.search-results-title {
+			font-size: 1.75rem;
+			color: var(--text-primary);
+			margin-bottom: 1rem;
+		}
+
+		.results-section {
+			margin-bottom: 3rem;
+		}
+
+		.results-section h3 {
+			font-size: 1.25rem;
+			color: var(--primary);
+			margin-bottom: 1rem;
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+		}
+
 </head>
 
 <body id="content">
@@ -137,7 +218,26 @@
 		</h1>
 		<p class="page-subtitle">Explore movies by category to find your next favorite</p>
 
-		<!-- Categories Grid -->
+		<!-- Search Section -->
+		<div class="search-section">
+			<div style="text-align: center; margin-bottom: 1.5rem;">
+				<h2 style="color: var(--text-primary); margin-bottom: 0.5rem;">Search Movies</h2>
+				<p style="color: var(--text-secondary); font-size: 0.95rem;">Find a movie and get personalized recommendations</p>
+			</div>
+			<div class="search-container">
+				<input type="text" class="search-input" id="searchInput" placeholder="Enter movie title, director, or actor..." autocomplete="off">
+				<button class="search-btn" onclick="performSearch()">
+					<i class="fas fa-search"></i> Search
+				</button>
+			</div>
+		</div>
+
+		<!-- Search Results -->
+		<div id="searchResults"></div>
+
+		<h1 class="page-title" style="margin-top: 3rem;">
+			<i class="fas fa-film"></i> Browse by Genre
+		</h1>
 		<div class="category-grid" id="categoriesGrid">
 			<div style="text-align: center; color: var(--text-secondary); grid-column: 1/-1;">
 				Loading categories...
@@ -521,8 +621,113 @@
 			} catch (e) {
 				console.error('[v0] Error showing movie details:', e);
 				alert('Error loading movie details');
+				}
 			}
 		}
+
+		// Search functionality
+		function performSearch() {
+			const query = document.getElementById('searchInput').value.trim();
+			if (!query) {
+				alert('Please enter a search query');
+				return;
+			}
+
+			console.log('[v0] Performing search for:', query);
+			document.getElementById('searchResults').innerHTML = '<div style="text-align: center; color: var(--text-secondary);">Searching movies...</div>';
+			document.getElementById('searchResults').style.display = 'block';
+
+			fetch(`/api/search?q=${encodeURIComponent(query)}`)
+				.then(response => response.json())
+				.then(data => {
+					console.log('[v0] Search results:', data);
+					displaySearchResults(data);
+				})
+				.catch(error => {
+					console.error('[v0] Search error:', error);
+					document.getElementById('searchResults').innerHTML = '<div style="color: var(--error);">Error performing search. Please try again.</div>';
+				});
+		}
+
+		function displaySearchResults(data) {
+			const resultsDiv = document.getElementById('searchResults');
+			let html = '';
+
+			// Found movies section
+			if (data.movies && data.movies.length > 0) {
+				html += `
+					<div class="results-section">
+						<h3><i class="fas fa-film"></i> Found Movies (${data.movies.length})</h3>
+						<div class="movie-grid">
+				`;
+
+				data.movies.forEach(movie => {
+					const movieJson = JSON.stringify(movie).replace(/"/g, '&quot;');
+					html += `
+						<div style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(229, 9, 20, 0.2); border-radius: 0.75rem; overflow: hidden; transition: all 0.3s ease; display: flex; flex-direction: column; cursor: pointer;"
+						     onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='0 12px 30px rgba(229, 9, 20, 0.3)';"
+						     onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+						     onclick="showMovieDetails('${movieJson}')">
+							<div style="width: 100%; aspect-ratio: 2/3; background: linear-gradient(135deg, rgba(229, 9, 20, 0.3), rgba(229, 9, 20, 0.1)); display: flex; align-items: center; justify-content: center; font-size: 3rem; color: var(--text-secondary);">
+								🎬
+							</div>
+							<div style="padding: 1rem;">
+								<div style="color: var(--text-primary); font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem;">${movie.movie_title}</div>
+								<div style="color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 0.5rem;">${movie.director_name}</div>
+								<div style="color: var(--primary); font-weight: 700;">★ ${parseFloat(movie.imdb_score).toFixed(1)}/10</div>
+							</div>
+						</div>
+					`;
+				});
+
+				html += '</div></div>';
+			}
+
+			// Similar/Recommended movies section
+			if (data.similar && data.similar.length > 0) {
+				html += `
+					<div class="results-section">
+						<h3><i class="fas fa-sparkles"></i> Recommended Similar Movies (${data.similar.length})</h3>
+						<div class="movie-grid">
+				`;
+
+				data.similar.forEach(movie => {
+					const movieJson = JSON.stringify(movie).replace(/"/g, '&quot;');
+					html += `
+						<div style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(229, 9, 20, 0.2); border-radius: 0.75rem; overflow: hidden; transition: all 0.3s ease; display: flex; flex-direction: column; cursor: pointer;"
+						     onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='0 12px 30px rgba(229, 9, 20, 0.3)';"
+						     onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+						     onclick="showMovieDetails('${movieJson}')">
+							<div style="width: 100%; aspect-ratio: 2/3; background: linear-gradient(135deg, rgba(229, 9, 20, 0.3), rgba(229, 9, 20, 0.1)); display: flex; align-items: center; justify-content: center; font-size: 3rem; color: var(--text-secondary);">
+								🎬
+							</div>
+							<div style="padding: 1rem;">
+								<div style="color: var(--text-primary); font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem;">${movie.movie_title}</div>
+								<div style="color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 0.5rem;">${movie.director_name}</div>
+								<div style="color: var(--primary); font-weight: 700;">★ ${parseFloat(movie.imdb_score).toFixed(1)}/10</div>
+							</div>
+						</div>
+					`;
+				});
+
+				html += '</div></div>';
+			}
+
+			// No results
+			if ((!data.movies || data.movies.length === 0) && (!data.similar || data.similar.length === 0)) {
+				html = '<div style="text-align: center; color: var(--text-secondary); padding: 2rem;">No movies found matching your search. Try another title!</div>';
+			}
+
+			resultsDiv.innerHTML = html;
+			console.log('[v0] Search results displayed');
+		}
+
+		// Allow Enter key to search
+		document.addEventListener('keydown', function(event) {
+			if (event.key === 'Enter' && document.activeElement.id === 'searchInput') {
+				performSearch();
+			}
+		});
 	</script>
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
