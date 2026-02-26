@@ -82,10 +82,15 @@ function getCategoryIcon(category) {
     'Romance': '💕',
     'Science Fiction': '🚀',
     'Sci-Fi': '🚀',
+    'Sci Fi': '🚀',
     'Thriller': '⚡',
     'War': '🎖️',
     'Western': '🤠',
-    'Romance': '💕'
+    'Tubi': '🎞️',
+    'B-Movies': '🎞️',
+    'Indie': '🌟',
+    'Gems': '💎',
+    'Cult': '👁️'
   };
   
   for (const key in iconMap) {
@@ -96,6 +101,76 @@ function getCategoryIcon(category) {
   return '🎬';
 }
 
+// Display all categories with grouping for indie sources
+function displayCategories(categories) {
+  const categoriesContainer = document.getElementById('categories-container');
+  
+  if (!categoriesContainer) return;
+
+  // Separate regular genres from indie/alternative sources
+  const regularGenres = [];
+  const alternativeSources = [];
+  
+  categories.forEach(cat => {
+    const catLower = cat.toLowerCase();
+    if (catLower.includes('tubi') || catLower.includes('indie') || 
+        catLower.includes('gem') || catLower.includes('cult') || catLower.includes('b-movie')) {
+      alternativeSources.push(cat);
+    } else {
+      regularGenres.push(cat);
+    }
+  });
+
+  let html = '<div class="categories-wrapper">';
+  
+  // Regular genres section
+  html += '<div class="category-section">';
+  html += '<h4 style="color: var(--primary); margin-bottom: 1.5rem; font-weight: 700; margin-top: 0;">Popular Genres</h4>';
+  html += '<div class="categories-grid">';
+  
+  regularGenres.forEach((genre) => {
+    const icon = getCategoryIcon(genre);
+    html += `
+      <div class="category-card" onclick="loadMoviesByGenre('${genre}')">
+        <div class="category-icon">${icon}</div>
+        <h5 class="category-name">${genre}</h5>
+        <p class="category-desc">Explore ${genre} movies</p>
+        <button class="btn btn-sm btn-primary" style="margin-top: auto;">View Movies</button>
+      </div>
+    `;
+  });
+  
+  html += '</div></div>';
+  
+  // Alternative sources section
+  if (alternativeSources.length > 0) {
+    html += '<div class="category-section" style="margin-top: 3rem;">';
+    html += '<h4 style="color: #ff6b6b; margin-bottom: 1rem; font-weight: 700;">Crazy Feeds - Indie & B-Movies</h4>';
+    html += '<p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem;">Discover cult classics, hidden gems, and wild B-movies from Tubi and indie sources</p>';
+    html += '<div class="categories-grid">';
+    
+    alternativeSources.forEach((source) => {
+      const icon = getCategoryIcon(source);
+      html += `
+        <div class="category-card indie-card" onclick="loadMoviesByGenre('${source}')" style="border: 2px solid #ff6b6b;">
+          <div class="category-icon" style="font-size: 2rem;">${icon}</div>
+          <h5 class="category-name">${source}</h5>
+          <p class="category-desc">Experimental & Unique</p>
+          <div style="display: flex; gap: 0.5rem; margin-top: auto;">
+            <span style="background: #ff6b6b; color: white; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.7rem; font-weight: 600;">NEW</span>
+          </div>
+        </div>
+      `;
+    });
+    
+    html += '</div></div>';
+  }
+  
+  html += '</div>';
+  categoriesContainer.innerHTML = html;
+  console.log('[v0] Categories displayed with indie sources:', categories.length);
+}
+
 // Load movies by selected genre
 function loadMoviesByGenre(genre) {
   console.log('[v0] Loading movies for genre:', genre);
@@ -103,6 +178,79 @@ function loadMoviesByGenre(genre) {
   const genreTitle = document.getElementById('genre-title');
   
   // Show loading state
+  if (moviesContainer && genreTitle) {
+    moviesContainer.innerHTML = '<div style="text-align: center; padding: 2rem;"><div class="spinner-border text-primary"></div></div>';
+    genreTitle.textContent = `Loading ${genre} movies...`;
+  }
+
+  fetch(`/api/movies-by-genre/${encodeURIComponent(genre)}`)
+    .then(response => response.json())
+    .then(data => {
+      console.log('[v0] Movies loaded for genre:', genre, data.movies.length);
+      if (data.movies && data.movies.length > 0) {
+        displayGenreMovies(data.movies, genre, data.source);
+        if (genreTitle) genreTitle.textContent = `${genre} Movies`;
+      } else {
+        if (moviesContainer) {
+          moviesContainer.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No movies found for this genre.</p>';
+        }
+        if (genreTitle) genreTitle.textContent = `${genre} - No movies found`;
+      }
+    })
+    .catch(error => {
+      console.error('[v0] Error loading movies:', error);
+      if (moviesContainer) {
+        moviesContainer.innerHTML = '<p style="text-align: center; color: var(--error);">Error loading movies. Please try again.</p>';
+      }
+    });
+}
+
+// Display movies for a genre
+function displayGenreMovies(movies, genre, source = 'Database') {
+  const moviesContainer = document.getElementById('genre-movies-container');
+  if (!moviesContainer) return;
+
+  let html = '<div class="genre-movies-grid">';
+  
+  movies.forEach((movie, index) => {
+    const movieTitle = movie.title || 'Unknown Movie';
+    const rating = movie.rating || 0;
+    const movieSource = movie.source || source || 'Database';
+    
+    // Generate emoji based on genre
+    let emoji = '🎬';
+    const genreLower = genre.toLowerCase();
+    if (genreLower.includes('action')) emoji = '⚔️';
+    else if (genreLower.includes('comedy')) emoji = '😄';
+    else if (genreLower.includes('horror')) emoji = '👻';
+    else if (genreLower.includes('romance')) emoji = '💕';
+    else if (genreLower.includes('sci-fi')) emoji = '🚀';
+    else if (genreLower.includes('drama')) emoji = '🎭';
+    else if (genreLower.includes('tubi') || genreLower.includes('b-movie')) emoji = '🎞️';
+    else if (genreLower.includes('indie') || genreLower.includes('gems')) emoji = '🌟';
+    
+    html += `
+      <div class="genre-movie-card" onclick="searchMovie('${movieTitle}')">
+        <div class="genre-movie-poster">${emoji}</div>
+        <div class="genre-movie-info">
+          <div class="genre-movie-title">${movieTitle}</div>
+          <div class="genre-movie-rating">★ ${rating}/10</div>
+          <div class="genre-movie-source">${movieSource}</div>
+        </div>
+      </div>
+    `;
+  });
+  
+  html += '</div>';
+  moviesContainer.innerHTML = html;
+  console.log('[v0] Genre movies displayed:', movies.length);
+}
+
+// Navigate to search a movie
+function searchMovie(movieTitle) {
+  console.log('[v0] Searching for movie:', movieTitle);
+  window.location.href = '/?search=' + encodeURIComponent(movieTitle);
+}
   moviesContainer.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2rem;"><div class="spinner-border text-primary"></div></div>';
   genreTitle.textContent = `${genre} Movies`;
   
