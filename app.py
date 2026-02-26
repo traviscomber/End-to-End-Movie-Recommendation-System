@@ -423,16 +423,16 @@ def get_movies_by_genre(genre):
         if 'tubi' in genre_lower or 'b-movies' in genre_lower or 'b-movie' in genre_lower:
             # Return curated B-movie/indie collection
             indie_movies = [
-                {'title': 'The Room', 'rating': 7.3, 'source': 'Tubi'},
-                {'title': 'Rubber', 'rating': 5.9, 'source': 'Tubi'},
-                {'title': 'ThanksKilling', 'rating': 5.8, 'source': 'Tubi'},
-                {'title': 'Birdemic: Shock and Terror', 'rating': 1.9, 'source': 'Tubi'},
-                {'title': 'Troll 2', 'rating': 4.0, 'source': 'Tubi'},
-                {'title': 'Blood Lake', 'rating': 4.5, 'source': 'Tubi'},
-                {'title': 'Werewolf', 'rating': 3.2, 'source': 'Tubi'},
-                {'title': 'Miami Connection', 'rating': 5.4, 'source': 'Tubi'},
-                {'title': 'The Giant Gila Monster', 'rating': 4.2, 'source': 'Tubi'},
-                {'title': 'Plan 9 from Outer Space', 'rating': 5.6, 'source': 'Tubi'},
+                {'movie_title': 'The Room', 'imdb_score': 7.3, 'source': 'Tubi', 'director_name': 'Tommy Wiseau', 'genres': 'Drama', 'actor_1_name': 'Tommy Wiseau', 'actor_2_name': 'Greg Sestero', 'actor_3_name': 'Carolyn Minnott'},
+                {'movie_title': 'Rubber', 'imdb_score': 5.9, 'source': 'Tubi', 'director_name': 'Quentin Dupieux', 'genres': 'Comedy', 'actor_1_name': 'Stephen Spinella', 'actor_2_name': 'Roxane Mesquida', 'actor_3_name': 'Wings Hauser'},
+                {'movie_title': 'ThanksKilling', 'imdb_score': 5.8, 'source': 'Tubi', 'director_name': 'Jordan Downey', 'genres': 'Horror', 'actor_1_name': 'Wes Keltner', 'actor_2_name': 'Natalie Rodriguez', 'actor_3_name': ''},
+                {'movie_title': 'Birdemic: Shock and Terror', 'imdb_score': 1.9, 'source': 'Tubi', 'director_name': 'James Nguyen', 'genres': 'Sci-Fi', 'actor_1_name': 'Alan Bagh', 'actor_2_name': 'Whitney Moore', 'actor_3_name': 'Janae Cohn'},
+                {'movie_title': 'Troll 2', 'imdb_score': 4.0, 'source': 'Tubi', 'director_name': 'Claudio Fragasso', 'genres': 'Horror', 'actor_1_name': 'Michael Stephenson', 'actor_2_name': 'Connie McFarland', 'actor_3_name': 'Jonathan Day'},
+                {'movie_title': 'Blood Lake', 'imdb_score': 4.5, 'source': 'Tubi', 'director_name': 'Donald Farmer', 'genres': 'Horror', 'actor_1_name': 'Matt Shell', 'actor_2_name': 'Bridget Marquardt', 'actor_3_name': ''},
+                {'movie_title': 'Werewolf', 'imdb_score': 3.2, 'source': 'Tubi', 'director_name': 'Tony Zarindast', 'genres': 'Horror', 'actor_1_name': 'John Roll', 'actor_2_name': 'Adrianna Miles', 'actor_3_name': 'Rib Hilton'},
+                {'movie_title': 'Miami Connection', 'imdb_score': 5.4, 'source': 'Tubi', 'director_name': 'Richard Martiez', 'genres': 'Action', 'actor_1_name': 'YK Kim', 'actor_2_name': 'Angelo Di Prospero', 'actor_3_name': 'Craig Sechler'},
+                {'movie_title': 'The Giant Gila Monster', 'imdb_score': 4.2, 'source': 'Tubi', 'director_name': 'Ray Kellogg', 'genres': 'Sci-Fi', 'actor_1_name': 'Don Sullivan', 'actor_2_name': 'Lisa Simone', 'actor_3_name': 'Fred Graham'},
+                {'movie_title': 'Plan 9 from Outer Space', 'imdb_score': 5.6, 'source': 'Tubi', 'director_name': 'Ed Wood', 'genres': 'Sci-Fi', 'actor_1_name': 'Gregory Walcott', 'actor_2_name': 'Mona McKinnon', 'actor_3_name': 'Duke Moore'},
             ]
             logger.info(f"[v0] Returning {len(indie_movies)} B-movies from Tubi")
             result = {'genre': genre, 'movies': indie_movies[:20], 'source': 'Tubi'}
@@ -442,16 +442,16 @@ def get_movies_by_genre(genre):
         elif 'indie' in genre_lower or 'gems' in genre_lower or 'hidden' in genre_lower or 'cult' in genre_lower:
             # Return indie/hidden gems
             indie_movies = [
-                {'title': 'Everything Everywhere All at Once', 'rating': 8.1, 'source': 'Indie'},
-                {'title': 'Mulholland Drive', 'rating': 8.0, 'source': 'Indie'},
-                {'title': 'Eternal Sunshine of the Spotless Mind', 'rating': 8.3, 'source': 'Indie'},
-                {'title': 'Donnie Darko', 'rating': 8.0, 'source': 'Indie'},
-                {'title': 'A Ghost Story', 'rating': 7.5, 'source': 'Indie'},
-                {'title': 'The Florida Project', 'rating': 7.9, 'source': 'Indie'},
-                {'title': 'Hunt for the Wilderpeople', 'rating': 7.9, 'source': 'Indie'},
-                {'title': 'Moonrise Kingdom', 'rating': 7.8, 'source': 'Indie'},
-                {'title': 'The Lighthouse', 'rating': 7.5, 'source': 'Indie'},
-                {'title': 'Parasite', 'rating': 8.6, 'source': 'Indie'},
+                {'movie_title': 'Everything Everywhere All at Once', 'imdb_score': 8.1, 'source': 'Indie', 'director_name': 'Daniel Kwan, Daniel Scheinert', 'genres': 'Drama', 'actor_1_name': 'Michelle Yeoh', 'actor_2_name': 'Stephanie Hsu', 'actor_3_name': 'Ke Huy Quan'},
+                {'movie_title': 'Mulholland Drive', 'imdb_score': 8.0, 'source': 'Indie', 'director_name': 'David Lynch', 'genres': 'Drama', 'actor_1_name': 'Naomi Watts', 'actor_2_name': 'Laura Harring', 'actor_3_name': 'Justin Theroux'},
+                {'movie_title': 'Eternal Sunshine of the Spotless Mind', 'imdb_score': 8.3, 'source': 'Indie', 'director_name': 'Michel Gondry', 'genres': 'Romance', 'actor_1_name': 'Jim Carrey', 'actor_2_name': 'Kate Winslet', 'actor_3_name': 'Thomas Jay Ryan'},
+                {'movie_title': 'Donnie Darko', 'imdb_score': 8.0, 'source': 'Indie', 'director_name': 'Richard Kelly', 'genres': 'Drama', 'actor_1_name': 'Jake Gyllenhaal', 'actor_2_name': 'Jena Malone', 'actor_3_name': 'Mary McDonnell'},
+                {'movie_title': 'A Ghost Story', 'imdb_score': 7.5, 'source': 'Indie', 'director_name': 'David Lowery', 'genres': 'Drama', 'actor_1_name': 'Casey Affleck', 'actor_2_name': 'Rooney Mara', 'actor_3_name': 'Will Old'},
+                {'movie_title': 'The Florida Project', 'imdb_score': 7.9, 'source': 'Indie', 'director_name': 'Sean Baker', 'genres': 'Drama', 'actor_1_name': 'Willem Dafoe', 'actor_2_name': 'Bria Vinaite', 'actor_3_name': 'Brooklynn Prince'},
+                {'movie_title': 'Hunt for the Wilderpeople', 'imdb_score': 7.9, 'source': 'Indie', 'director_name': 'Taika Waititi', 'genres': 'Comedy', 'actor_1_name': 'Sam Neill', 'actor_2_name': 'Julian Dennison', 'actor_3_name': 'Rima Te Wiata'},
+                {'movie_title': 'Moonrise Kingdom', 'imdb_score': 7.8, 'source': 'Indie', 'director_name': 'Wes Anderson', 'genres': 'Adventure', 'actor_1_name': 'Jared Gilman', 'actor_2_name': 'Kara Hayward', 'actor_3_name': 'Bruce Willis'},
+                {'movie_title': 'The Lighthouse', 'imdb_score': 7.5, 'source': 'Indie', 'director_name': 'Robert Eggers', 'genres': 'Drama', 'actor_1_name': 'Robert Pattinson', 'actor_2_name': 'Willem Dafoe', 'actor_3_name': 'Valeriia Karaman'},
+                {'movie_title': 'Parasite', 'imdb_score': 8.6, 'source': 'Indie', 'director_name': 'Bong Joon-ho', 'genres': 'Thriller', 'actor_1_name': 'Song Kang-ho', 'actor_2_name': 'Lee Sun-kyun', 'actor_3_name': 'Cho Yeo-jeong'},
             ]
             logger.info(f"[v0] Returning {len(indie_movies)} indie gems")
             result = {'genre': genre, 'movies': indie_movies[:20], 'source': 'Indie'}
@@ -470,10 +470,35 @@ def get_movies_by_genre(genre):
                     score = 6.0 + ((actors_count * 0.5 + has_director * 2) / 10.0)
                     score = min(9.5, max(6.0, score))
                     
+                    # Build complete movie object with all available data
+                    director_name = str(row.get('director_name', 'Unknown Director')).strip()
+                    if director_name == '' or director_name == 'nan':
+                        director_name = 'Unknown Director'
+                    
+                    genres = str(row.get('genres', 'N/A')).strip()
+                    if genres == '' or genres == 'nan':
+                        genres = 'N/A'
+                    
+                    # Collect cast members
+                    cast = []
+                    for i in range(1, 4):
+                        actor = row.get(f'actor_{i}_name')
+                        if pd.notna(actor) and str(actor).strip() and str(actor).strip() != 'nan':
+                            cast.append(str(actor).strip())
+                    cast_str = ', '.join(cast) if cast else 'Unknown Cast'
+                    
                     movie_dict = {
-                        'title': str(row.get('movie_title', 'Unknown')),
-                        'rating': round(score, 1),
-                        'source': 'Database'
+                        'movie_title': str(row.get('movie_title', 'Unknown')).strip(),
+                        'title': str(row.get('movie_title', 'Unknown')).strip(),  # Alias for compatibility
+                        'imdb_score': round(score, 1),
+                        'rating': round(score, 1),  # Alias for compatibility
+                        'source': 'Database',
+                        'director_name': director_name,
+                        'genres': genres,
+                        'cast': cast_str,
+                        'actor_1_name': str(row.get('actor_1_name', '')).strip() if pd.notna(row.get('actor_1_name')) else '',
+                        'actor_2_name': str(row.get('actor_2_name', '')).strip() if pd.notna(row.get('actor_2_name')) else '',
+                        'actor_3_name': str(row.get('actor_3_name', '')).strip() if pd.notna(row.get('actor_3_name')) else '',
                     }
                     movies.append(movie_dict)
         else:
