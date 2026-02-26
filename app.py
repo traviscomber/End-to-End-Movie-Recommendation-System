@@ -373,14 +373,6 @@ def get_categories_and_trending():
             'error': str(e)
         }), 200
 
-@app.route("/categories")
-@handle_errors
-def categories():
-    """Display categories/genres page."""
-    with PerformanceMonitor("Load Categories Page"):
-        logger.info("Loading categories page")
-        return render_template('categories.html')
-
 @app.route("/api/categories", methods=["GET"])
 @handle_errors
 def get_categories():
