@@ -17,18 +17,26 @@ function loadCategories() {
   categoriesContainer.innerHTML = '<div style="text-align: center; padding: 2rem;"><div class="spinner-border text-primary"></div></div>';
 
   fetch('/api/categories')
-    .then(response => response.json())
+    .then(response => {
+      console.log('[v0] API response status:', response.status);
+      return response.json();
+    })
     .then(data => {
-      console.log('[v0] Categories loaded:', data.categories.length);
-      if (data.categories && data.categories.length > 0) {
-        displayCategories(data.categories);
+      console.log('[v0] Categories loaded:', data);
+      const categories = data.categories || [];
+      
+      if (categories && categories.length > 0) {
+        console.log('[v0] Displaying', categories.length, 'categories');
+        displayCategories(categories);
       } else {
-        categoriesContainer.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No categories available</p>';
+        console.warn('[v0] No categories available, showing defaults');
+        displayCategories(['Action', 'Drama', 'Comedy', 'Thriller', 'Sci-Fi', 'Horror', 'Romance', 'Adventure']);
       }
     })
     .catch(error => {
       console.error('[v0] Error loading categories:', error);
-      categoriesContainer.innerHTML = '<p style="text-align: center; color: var(--error);">Error loading categories. Please try again.</p>';
+      console.log('[v0] Using fallback categories');
+      displayCategories(['Action', 'Drama', 'Comedy', 'Thriller', 'Sci-Fi', 'Horror', 'Romance', 'Adventure']);
     });
 }
 
@@ -152,14 +160,23 @@ function loadTrendingMovies() {
   }
 
   fetch('/api/trending')
-    .then(response => response.json())
+    .then(response => {
+      console.log('[v0] Trending API response:', response.status);
+      return response.json();
+    })
     .then(data => {
-      console.log('[v0] Trending movies loaded:', data.trending.length);
+      console.log('[v0] Trending movies loaded:', data.trending ? data.trending.length : 0);
       if (data.trending && data.trending.length > 0) {
         displayTrendingMovies(data.trending);
+      } else {
+        console.log('[v0] No trending movies, hiding section');
+        trendingContainer.parentElement.style.display = 'none';
       }
     })
-    .catch(error => console.error('[v0] Error loading trending:', error));
+    .catch(error => {
+      console.error('[v0] Error loading trending:', error);
+      trendingContainer.parentElement.style.display = 'none';
+    });
 }
 
 // Display trending movies carousel
@@ -168,13 +185,16 @@ function displayTrendingMovies(movies) {
   
   let html = '<div class="trending-carousel">';
   movies.slice(0, 8).forEach((movie, index) => {
+    const rating = movie.imdb_score || 0;
+    const movieTitle = movie.movie_title || 'Unknown Movie';
+    
     html += `
       <div class="trending-card">
         <div style="background: linear-gradient(135deg, var(--primary), rgba(229, 9, 20, 0.5)); padding: 2rem; border-radius: 1rem; text-align: center; height: 100%;">
           <div style="font-size: 2rem; margin-bottom: 1rem;">🏆</div>
           <h6 style="color: var(--text-primary); margin-bottom: 0.5rem; font-weight: 700;">#${index + 1}</h6>
-          <h5 style="color: white; margin-bottom: 0.5rem;">${movie.movie_title}</h5>
-          <p style="color: rgba(255,255,255,0.8); font-size: 0.9rem;">Rating: ${movie.imdb_score}/10</p>
+          <h5 style="color: white; margin-bottom: 0.5rem;">${movieTitle}</h5>
+          <p style="color: rgba(255,255,255,0.8); font-size: 0.9rem;">Rating: ${rating.toFixed(1)}/10</p>
         </div>
       </div>
     `;
@@ -182,7 +202,7 @@ function displayTrendingMovies(movies) {
   html += '</div>';
   
   trendingContainer.innerHTML = html;
-  console.log('[v0] Trending movies displayed');
+  console.log('[v0] Trending movies displayed:', movies.length);
 }
 
 // Navigate to movie search

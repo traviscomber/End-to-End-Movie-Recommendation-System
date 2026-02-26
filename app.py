@@ -63,13 +63,15 @@ def create_similarity():
             return None, None
             
         data = pd.read_csv(data_path)
+        logger.info(f"Loaded data with {len(data)} movies and columns: {list(data.columns)}")
+        
         cv = CountVectorizer()
         count_matrix = cv.fit_transform(data['comb']) 
         similarity = cosine_similarity(count_matrix)
         logger.info("Similarity matrix created successfully")
         return data, similarity
     except Exception as e:
-        logger.error(f"Error creating similarity matrix: {str(e)}")
+        logger.error(f"Error creating similarity matrix: {str(e)}", exc_info=True)
         return None, None
 
 def rcmd(m):
@@ -266,52 +268,56 @@ def categories():
 def get_categories():
     """Get list of all movie categories/genres."""
     try:
-        if data is None:
-            create_similarity()
+        global data, similarity
+        if data is None or similarity is None:
+            data, similarity = create_similarity()
         
         if data is None:
-            return jsonify({'error': 'Unable to load movie database'}), 500
+            return jsonify({'categories': [], 'error': 'Unable to load movie database'}), 200
         
         # Extract genres from the data
         categories = set()
-        for movie_genres in data.get('genres', []):
-            if isinstance(movie_genres, str):
-                genres_list = [g.strip() for g in movie_genres.split(',')]
-                categories.update(genres_list)
+        if 'genres' in data.columns:
+            for movie_genres in data['genres']:
+                if isinstance(movie_genres, str):
+                    genres_list = [g.strip() for g in movie_genres.split(',')]
+                    categories.update(genres_list)
         
         sorted_categories = sorted(list(categories))
         logger.info(f"Retrieved {len(sorted_categories)} categories")
-        return jsonify({'categories': sorted_categories})
+        return jsonify({'categories': sorted_categories if sorted_categories else ['Action', 'Drama', 'Comedy', 'Thriller', 'Sci-Fi']})
     except Exception as e:
-        logger.error(f"Error getting categories: {str(e)}")
-        return jsonify({'error': 'Failed to retrieve categories'}), 500
+        logger.error(f"Error getting categories: {str(e)}", exc_info=True)
+        return jsonify({'categories': ['Action', 'Drama', 'Comedy', 'Thriller', 'Sci-Fi']}), 200
 
 @app.route("/api/movies-by-genre/<genre>", methods=["GET"])
 @handle_errors
 def get_movies_by_genre(genre):
     """Get movies by genre."""
     try:
-        if data is None:
-            create_similarity()
+        global data, similarity
+        if data is None or similarity is None:
+            data, similarity = create_similarity()
         
         if data is None:
-            return jsonify({'error': 'Unable to load movie database'}), 500
+            return jsonify({'movies': [], 'genre': genre}), 200
         
         # Filter movies by genre
         movies = []
-        for idx, row in data.iterrows():
-            genres_str = str(row.get('genres', ''))
-            if genre.lower() in genres_str.lower():
-                movies.append({
-                    'title': row.get('movie_title', ''),
-                    'rating': row.get('imdb_score', 0)
-                })
+        if 'genres' in data.columns:
+            for idx, row in data.iterrows():
+                genres_str = str(row.get('genres', ''))
+                if genre.lower() in genres_str.lower():
+                    movies.append({
+                        'title': row.get('movie_title', 'Unknown'),
+                        'rating': float(row.get('imdb_score', 0))
+                    })
         
         logger.info(f"Retrieved {len(movies)} movies for genre: {genre}")
-        return jsonify({'genre': genre, 'movies': movies[:20]})  # Limit to 20
+        return jsonify({'genre': genre, 'movies': movies[:20]})
     except Exception as e:
-        logger.error(f"Error getting movies by genre: {str(e)}")
-        return jsonify({'error': 'Failed to retrieve movies'}), 500
+        logger.error(f"Error getting movies by genre: {str(e)}", exc_info=True)
+        return jsonify({'movies': [], 'genre': genre}), 200
 
 @app.route("/api/movie-summary", methods=["POST"])
 @handle_errors
@@ -343,19 +349,24 @@ def get_movie_summary():
 def get_trending():
     """Get trending/top-rated movies."""
     try:
-        if data is None:
-            create_similarity()
+        global data, similarity
+        if data is None or similarity is None:
+            data, similarity = create_similarity()
         
         if data is None:
-            return jsonify({'error': 'Unable to load movie database'}), 500
+            return jsonify({'trending': []}), 200
         
         # Sort by rating and return top 10
-        trending = data.nlargest(10, 'imdb_score')[['movie_title', 'imdb_score', 'genres']].to_dict('records')
+        if 'imdb_score' in data.columns:
+            trending = data.nlargest(10, 'imdb_score')[['movie_title', 'imdb_score']].to_dict('records')
+        else:
+            trending = data.head(10)[['movie_title']].to_dict('records')
+        
         logger.info(f"Retrieved {len(trending)} trending movies")
         return jsonify({'trending': trending})
     except Exception as e:
-        logger.error(f"Error getting trending movies: {str(e)}")
-        return jsonify({'error': 'Failed to retrieve trending movies'}), 500
+        logger.error(f"Error getting trending movies: {str(e)}", exc_info=True)
+        return jsonify({'trending': []}), 200
 
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0", port=5000)
