@@ -177,7 +177,7 @@ def health_check():
 
 @app.route("/api/search", methods=["GET", "POST"])
 def api_search():
-    """Search for movies and get NLP-based recommendations."""
+    """Search for movies - fast endpoint without NLP processing."""
     try:
         query = request.args.get('q', '') or request.form.get('query', '')
         query = query.strip().lower()
@@ -187,15 +187,15 @@ def api_search():
         
         logger.info(f"[v0] Searching for: {query}")
         
-        if data is None or similarity is None:
+        if data is None:
             return jsonify({'error': 'Database not loaded', 'movies': [], 'similar': []}), 500
         
-        # Search for movies by title (fuzzy matching)
+        # Search for movies by title (fuzzy matching) - FAST
         found_movies = []
         for idx, row in data.iterrows():
             title = str(row.get('movie_title', '')).lower()
             # Direct match or partial match
-            if query in title or title in query or abs(len(query) - len(title)) <= 2:
+            if query in title or title in query:
                 # Build complete movie object
                 rating = float(row.get('imdb_score', 6.0))
                 director = str(row.get('director_name', 'Unknown Director')).strip() or 'Unknown Director'
@@ -220,49 +220,15 @@ def api_search():
         
         logger.info(f"[v0] Found {len(found_movies)} movies matching '{query}'")
         
-        # Get NLP recommendations if we found a movie
-        similar_movies = []
-        if found_movies:
-            top_movie = found_movies[0]['movie_title']
-            try:
-                rec_list = rcmd(top_movie)
-                if isinstance(rec_list, list):
-                    for rec_title in rec_list[:10]:  # Top 10 recommendations
-                        rec_movie = data[data['movie_title'] == rec_title]
-                        if not rec_movie.empty:
-                            rec_row = rec_movie.iloc[0]
-                            rating = float(rec_row.get('imdb_score', 6.0))
-                            director = str(rec_row.get('director_name', 'Unknown Director')).strip() or 'Unknown Director'
-                            genres = str(rec_row.get('genres', 'N/A')).strip() or 'N/A'
-                            
-                            # Collect cast
-                            cast = []
-                            for i in range(1, 4):
-                                actor = rec_row.get(f'actor_{i}_name')
-                                if pd.notna(actor) and str(actor).strip() and str(actor).strip() != 'nan':
-                                    cast.append(str(actor).strip())
-                            
-                            sim_obj = {
-                                'movie_title': rec_title,
-                                'imdb_score': round(rating, 1),
-                                'director_name': director,
-                                'genres': genres,
-                                'cast': ', '.join(cast) if cast else 'Unknown Cast',
-                                'source': 'Database',
-                            }
-                            similar_movies.append(sim_obj)
-            except Exception as e:
-                logger.warning(f"[v0] Error getting recommendations: {str(e)}")
-        
         result = {
             'query': query,
             'movies': found_movies,
-            'similar': similar_movies,
+            'similar': [],
             'total_found': len(found_movies),
-            'total_similar': len(similar_movies)
+            'total_similar': 0
         }
         
-        logger.info(f"[v0] Search response: {len(found_movies)} movies + {len(similar_movies)} recommendations")
+        logger.info(f"[v0] Search response: {len(found_movies)} movies")
         return jsonify(result), 200
     
     except Exception as e:
