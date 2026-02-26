@@ -8,9 +8,6 @@ try:
     # Import the Flask app from the main app.py
     from app import app
     
-    # Export the app for Vercel
-    handler = app
-    
 except Exception as e:
     import logging
     logging.error(f"Failed to import Flask app: {str(e)}", exc_info=True)
@@ -26,6 +23,4 @@ except Exception as e:
             'status': 'error',
             'message': f'Failed to initialize application: {str(e)}'
         }), 500
-    
-    handler = app
 
