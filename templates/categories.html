@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Browse by Genre - Movie Finder</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+	<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='style.css') }}">
+	<style>
+		.category-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+			gap: 2rem;
+			padding: 2rem;
+			margin: 2rem 0;
+		}
+
+		.category-card {
+			background: linear-gradient(135deg, rgba(229, 9, 20, 0.2), rgba(229, 9, 20, 0.05));
+			border: 2px solid rgba(229, 9, 20, 0.3);
+			border-radius: 1rem;
+			padding: 2rem;
+			text-align: center;
+			cursor: pointer;
+			transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			min-height: 200px;
+		}
+
+		.category-card:hover {
+			transform: translateY(-8px) scale(1.05);
+			border-color: var(--primary);
+			background: linear-gradient(135deg, rgba(229, 9, 20, 0.3), rgba(229, 9, 20, 0.15));
+			box-shadow: 0 20px 40px rgba(229, 9, 20, 0.3);
+		}
+
+		.category-icon {
+			font-size: 3rem;
+			color: var(--primary);
+			margin-bottom: 1rem;
+		}
+
+		.category-name {
+			font-size: 1.25rem;
+			font-weight: 600;
+			color: var(--text-primary);
+		}
+
+		.category-count {
+			font-size: 0.85rem;
+			color: var(--text-secondary);
+			margin-top: 0.5rem;
+		}
+
+		.page-title {
+			font-size: 3rem;
+			color: var(--primary);
+			margin: 3rem 0 1rem 0;
+			text-align: center;
+			font-weight: 700;
+		}
+
+		.page-subtitle {
+			text-align: center;
+			color: var(--text-secondary);
+			margin-bottom: 2rem;
+			font-size: 1.1rem;
+		}
+
+		.trending-section {
+			margin-top: 4rem;
+			margin-bottom: 4rem;
+		}
+
+		.trending-title {
+			font-size: 2rem;
+			color: var(--text-primary);
+			margin-bottom: 1.5rem;
+		}
+
+		.movie-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+			gap: 1.5rem;
+			padding: 1rem 0;
+		}
+
+		.movie-card {
+			background: rgba(255, 255, 255, 0.05);
+			backdrop-filter: blur(10px);
+			border: 1px solid rgba(229, 9, 20, 0.2);
+			border-radius: 0.75rem;
+			overflow: hidden;
+			transition: all 0.3s;
+			cursor: pointer;
+		}
+
+		.movie-card:hover {
+			transform: translateY(-6px);
+			border-color: var(--primary);
+			box-shadow: 0 15px 30px rgba(229, 9, 20, 0.2);
+		}
+
+		.movie-card-content {
+			padding: 1rem;
+		}
+
+		.movie-card-title {
+			color: var(--text-primary);
+			font-weight: 600;
+			font-size: 0.9rem;
+			margin-bottom: 0.5rem;
+			line-height: 1.3;
+		}
+
+		.movie-card-rating {
+			color: var(--primary);
+			font-size: 0.85rem;
+		}
+	</style>
+</head>
+
+<body id="content">
+	<div class="ml-container">
+		<!-- Header -->
+		<button class="btn btn-secondary" style="margin-top: 1rem;" onclick="window.location.href='/'">
+			<i class="fas fa-home"></i> Back to Home
+		</button>
+
+		<h1 class="page-title">
+			<i class="fas fa-film"></i> Browse by Genre
+		</h1>
+		<p class="page-subtitle">Explore movies by category to find your next favorite</p>
+
+		<!-- Categories Grid -->
+		<div class="category-grid" id="categoriesGrid">
+			<div style="text-align: center; color: var(--text-secondary); grid-column: 1/-1;">
+				Loading categories...
+			</div>
+		</div>
+
+		<!-- Trending Movies Section -->
+		<div class="trending-section">
+			<h2 class="trending-title">
+				<i class="fas fa-fire" style="color: #ff6b35;"></i> Trending Movies
+			</h2>
+			<div class="movie-grid" id="trendingGrid">
+				<div style="text-align: center; color: var(--text-secondary); grid-column: 1/-1;">
+					Loading trending movies...
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+	<script>
+		// Load categories on page load
+		document.addEventListener('DOMContentLoaded', function() {
+			loadCategories();
+			loadTrending();
+		});
+
+		function loadCategories() {
+			fetch('/api/categories')
+				.then(response => response.json())
+				.then(data => {
+					const grid = document.getElementById('categoriesGrid');
+					grid.innerHTML = '';
+					
+					if (data.categories && data.categories.length > 0) {
+						data.categories.forEach(category => {
+							const card = document.createElement('div');
+							card.className = 'category-card';
+							card.innerHTML = `
+								<div class="category-icon">
+									<i class="fas fa-tag"></i>
+								</div>
+								<div class="category-name">${category}</div>
+								<div class="category-count">Explore</div>
+							`;
+							card.onclick = () => viewGenre(category);
+							grid.appendChild(card);
+						});
+					} else {
+						grid.innerHTML = '<p style="color: var(--text-secondary); grid-column: 1/-1;">No categories found</p>';
+					}
+				})
+				.catch(error => {
+					console.error('Error loading categories:', error);
+					document.getElementById('categoriesGrid').innerHTML = '<p style="color: var(--error); grid-column: 1/-1;">Failed to load categories</p>';
+				});
+		}
+
+		function loadTrending() {
+			fetch('/api/trending')
+				.then(response => response.json())
+				.then(data => {
+					const grid = document.getElementById('trendingGrid');
+					grid.innerHTML = '';
+					
+					if (data.trending && data.trending.length > 0) {
+						data.trending.forEach(movie => {
+							const card = document.createElement('div');
+							card.className = 'movie-card';
+							card.innerHTML = `
+								<div class="movie-card-content">
+									<div class="movie-card-title">${movie.movie_title}</div>
+									<div class="movie-card-rating">
+										<i class="fas fa-star"></i> ${movie.imdb_score}/10
+									</div>
+								</div>
+							`;
+							grid.appendChild(card);
+						});
+					} else {
+						grid.innerHTML = '<p style="color: var(--text-secondary); grid-column: 1/-1;">No trending movies found</p>';
+					}
+				})
+				.catch(error => {
+					console.error('Error loading trending:', error);
+					document.getElementById('trendingGrid').innerHTML = '<p style="color: var(--error); grid-column: 1/-1;">Failed to load trending</p>';
+				});
+		}
+
+		function viewGenre(genre) {
+			// TODO: Implement genre view with movies
+			alert('Viewing movies in ' + genre + ' genre');
+		}
+	</script>
+</body>
+</html>

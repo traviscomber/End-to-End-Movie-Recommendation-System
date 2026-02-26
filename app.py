@@ -8,13 +8,14 @@ import urllib.request
 import logging
 import os
 from pathlib import Path
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import CountVectorizer
 from error_handler import (
     LoggerSetup, handle_errors, ErrorResponse, PerformanceMonitor,
     APIError, DatabaseError, ConfigurationError
 )
+from openai_helper import openai_helper
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -251,6 +252,110 @@ def recommend():
             return render_template('recommend.html', title='Error', poster='', overview='An error occurred while processing your request.',
                                  vote_average='0', vote_count='0', release_date='', runtime='', status='',
                                  genres='', movie_cards={}, reviews={}, casts={}, cast_details={})
+
+@app.route("/categories")
+@handle_errors
+def categories():
+    """Display categories/genres page."""
+    with PerformanceMonitor("Load Categories Page"):
+        logger.info("Loading categories page")
+        return render_template('categories.html')
+
+@app.route("/api/categories", methods=["GET"])
+@handle_errors
+def get_categories():
+    """Get list of all movie categories/genres."""
+    try:
+        if data is None:
+            create_similarity()
+        
+        if data is None:
+            return jsonify({'error': 'Unable to load movie database'}), 500
+        
+        # Extract genres from the data
+        categories = set()
+        for movie_genres in data.get('genres', []):
+            if isinstance(movie_genres, str):
+                genres_list = [g.strip() for g in movie_genres.split(',')]
+                categories.update(genres_list)
+        
+        sorted_categories = sorted(list(categories))
+        logger.info(f"Retrieved {len(sorted_categories)} categories")
+        return jsonify({'categories': sorted_categories})
+    except Exception as e:
+        logger.error(f"Error getting categories: {str(e)}")
+        return jsonify({'error': 'Failed to retrieve categories'}), 500
+
+@app.route("/api/movies-by-genre/<genre>", methods=["GET"])
+@handle_errors
+def get_movies_by_genre(genre):
+    """Get movies by genre."""
+    try:
+        if data is None:
+            create_similarity()
+        
+        if data is None:
+            return jsonify({'error': 'Unable to load movie database'}), 500
+        
+        # Filter movies by genre
+        movies = []
+        for idx, row in data.iterrows():
+            genres_str = str(row.get('genres', ''))
+            if genre.lower() in genres_str.lower():
+                movies.append({
+                    'title': row.get('movie_title', ''),
+                    'rating': row.get('imdb_score', 0)
+                })
+        
+        logger.info(f"Retrieved {len(movies)} movies for genre: {genre}")
+        return jsonify({'genre': genre, 'movies': movies[:20]})  # Limit to 20
+    except Exception as e:
+        logger.error(f"Error getting movies by genre: {str(e)}")
+        return jsonify({'error': 'Failed to retrieve movies'}), 500
+
+@app.route("/api/movie-summary", methods=["POST"])
+@handle_errors
+def get_movie_summary():
+    """Get AI-powered movie summary and recommendation explanation."""
+    try:
+        title = request.json.get('title', '')
+        overview = request.json.get('overview', '')
+        genres = request.json.get('genres', '')
+        
+        if not title:
+            return jsonify({'error': 'Movie title required'}), 400
+        
+        summary = openai_helper.generate_movie_summary(title, overview, genres)
+        logger.info(f"Generated AI summary for: {title}")
+        return jsonify(summary)
+    except Exception as e:
+        logger.error(f"Error generating movie summary: {str(e)}")
+        # Return fallback response
+        return jsonify({
+            'summary': 'A great movie worth watching!',
+            'why_recommended': 'Based on content similarity with your search.',
+            'perfect_for': 'Movie enthusiasts',
+            'vibe': 'Engaging'
+        })
+
+@app.route("/api/trending", methods=["GET"])
+@handle_errors
+def get_trending():
+    """Get trending/top-rated movies."""
+    try:
+        if data is None:
+            create_similarity()
+        
+        if data is None:
+            return jsonify({'error': 'Unable to load movie database'}), 500
+        
+        # Sort by rating and return top 10
+        trending = data.nlargest(10, 'imdb_score')[['movie_title', 'imdb_score', 'genres']].to_dict('records')
+        logger.info(f"Retrieved {len(trending)} trending movies")
+        return jsonify({'trending': trending})
+    except Exception as e:
+        logger.error(f"Error getting trending movies: {str(e)}")
+        return jsonify({'error': 'Failed to retrieve trending movies'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0", port=5000)

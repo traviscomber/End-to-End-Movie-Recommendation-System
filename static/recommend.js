@@ -18,11 +18,17 @@ $(function() {
     if (title=="") {
       $('.results').css('display','none');
       $('.fail').css('display','block');
+      if (typeof showNotification !== 'undefined') {
+        showNotification('Please enter a movie name', 'warning');
+      }
     }
     else{
       // Add to watch history
       if (typeof watchHistory !== 'undefined') {
         watchHistory.addToHistory(title);
+      }
+      if (typeof showLoadingSpinner !== 'undefined') {
+        showLoadingSpinner('Finding movies similar to "' + title + '"...');
       }
       load_details(my_api_key,title);
     }
@@ -168,16 +174,23 @@ function show_details(movie_details,arr,movie_title,my_api_key,movie_id){
     url:"/recommend",
     dataType: 'html',
     complete: function(){
-      $("#loader").delay(500).fadeOut();
+      if (typeof hideLoadingSpinner !== 'undefined') {
+        hideLoadingSpinner();
+      }
     },
     success: function(response) {
       $('.results').html(response);
       $('#autoComplete').val('');
       $(window).scrollTop(0);
+      if (typeof showNotification !== 'undefined') {
+        showNotification('Recommendations loaded successfully!', 'success');
+      }
     },
     error: function(xhr, status, error){
       console.error('Error posting recommendation:', error);
-      alert('Error processing recommendations. Please try again.');
+      if (typeof showNotification !== 'undefined') {
+        showNotification('Error processing recommendations. Please try again.', 'error');
+      }
     }
   });
 }
