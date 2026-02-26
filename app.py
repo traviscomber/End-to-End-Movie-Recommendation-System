@@ -123,13 +123,51 @@ def get_suggestions():
         logger.error(f"Error getting suggestions: {str(e)}")
         return []
 
+# Create template and static folders if they don't exist
+template_folder = BASE_DIR / "templates"
+static_folder = BASE_DIR / "static"
+
+template_folder.mkdir(exist_ok=True)
+static_folder.mkdir(exist_ok=True)
 
 app = Flask(__name__, 
-            template_folder=str(BASE_DIR / "templates"),
-            static_folder=str(BASE_DIR / "static"))
+            template_folder=str(template_folder),
+            static_folder=str(static_folder))
 
 # Load artifacts on startup
-load_artifacts()
+try:
+    load_artifacts()
+    logger.info("Artifacts loaded successfully on startup")
+except Exception as e:
+    logger.error(f"Failed to load artifacts on startup: {str(e)}", exc_info=True)
+
+# Global error handlers
+@app.errorhandler(404)
+def not_found(e):
+    logger.warning(f"404 Not Found: {request.path}")
+    return jsonify({'error': 'Not found', 'path': request.path}), 404
+
+@app.errorhandler(500)
+def internal_error(e):
+    logger.error(f"500 Internal Server Error: {str(e)}", exc_info=True)
+    return jsonify({'error': 'Internal server error', 'message': str(e)}), 500
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    logger.error(f"Unhandled exception: {str(e)}", exc_info=True)
+    return jsonify({'error': 'Server error', 'message': str(e)}), 500
+
+@app.route("/api/health", methods=["GET"])
+def health_check():
+    """Health check endpoint for deployment monitoring."""
+    status = {
+        'status': 'healthy',
+        'environment': os.getenv('FLASK_ENV', 'development'),
+        'data_loaded': data is not None,
+        'model_loaded': clf is not None,
+        'vectorizer_loaded': vectorizer is not None,
+    }
+    return jsonify(status), 200
 
 @app.route("/")
 @app.route("/home")
