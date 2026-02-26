@@ -127,19 +127,25 @@ def get_suggestions():
 template_folder = BASE_DIR / "templates"
 static_folder = BASE_DIR / "static"
 
-template_folder.mkdir(exist_ok=True)
-static_folder.mkdir(exist_ok=True)
+try:
+    template_folder.mkdir(exist_ok=True)
+    static_folder.mkdir(exist_ok=True)
+except Exception as e:
+    logger.warning(f"Could not create folders: {e}")
 
 app = Flask(__name__, 
             template_folder=str(template_folder),
             static_folder=str(static_folder))
 
-# Load artifacts on startup
+# Load artifacts on startup - don't crash if they're missing
 try:
-    load_artifacts()
-    logger.info("Artifacts loaded successfully on startup")
+    logger.info("Attempting to load artifacts...")
+    if load_artifacts():
+        logger.info("Artifacts loaded successfully on startup")
+    else:
+        logger.warning("Artifacts not fully loaded, app will continue without them")
 except Exception as e:
-    logger.error(f"Failed to load artifacts on startup: {str(e)}", exc_info=True)
+    logger.warning(f"Non-critical error loading artifacts: {str(e)}")
 
 # Global error handlers
 @app.errorhandler(404)
