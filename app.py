@@ -307,9 +307,10 @@ def get_movies_by_genre(genre):
         
         genre_lower = genre.lower()
         movies = []
+        logger.info(f"[v0] Fetching movies for genre: {genre}")
         
         # Handle special indie/alternative categories
-        if 'tubi' in genre_lower or 'b-movies' in genre_lower:
+        if 'tubi' in genre_lower or 'b-movies' in genre_lower or 'b-movie' in genre_lower:
             # Return curated B-movie/indie collection
             indie_movies = [
                 {'title': 'The Room', 'rating': 7.3, 'source': 'Tubi'},
@@ -323,8 +324,10 @@ def get_movies_by_genre(genre):
                 {'title': 'The Giant Gila Monster', 'rating': 4.2, 'source': 'Tubi'},
                 {'title': 'Plan 9 from Outer Space', 'rating': 5.6, 'source': 'Tubi'},
             ]
-            logger.info(f"Returning {len(indie_movies)} B-movies from Tubi")
-            return jsonify({'genre': genre, 'movies': indie_movies[:20], 'source': 'Tubi'})
+            logger.info(f"[v0] Returning {len(indie_movies)} B-movies from Tubi")
+            result = {'genre': genre, 'movies': indie_movies[:20], 'source': 'Tubi'}
+            logger.info(f"[v0] Response: {result}")
+            return jsonify(result)
         
         elif 'indie' in genre_lower or 'gems' in genre_lower or 'hidden' in genre_lower or 'cult' in genre_lower:
             # Return indie/hidden gems
@@ -340,11 +343,14 @@ def get_movies_by_genre(genre):
                 {'title': 'The Lighthouse', 'rating': 7.5, 'source': 'Indie'},
                 {'title': 'Parasite', 'rating': 8.6, 'source': 'Indie'},
             ]
-            logger.info(f"Returning {len(indie_movies)} indie gems")
-            return jsonify({'genre': genre, 'movies': indie_movies[:20], 'source': 'Indie'})
+            logger.info(f"[v0] Returning {len(indie_movies)} indie gems")
+            result = {'genre': genre, 'movies': indie_movies[:20], 'source': 'Indie'}
+            logger.info(f"[v0] Response: {result}")
+            return jsonify(result)
         
         # Standard genre filtering from main database
         if data is not None and 'genres' in data.columns:
+            logger.info(f"[v0] Searching database for genre: {genre_lower}")
             for idx, row in data.iterrows():
                 genres_str = str(row.get('genres', '')).lower()
                 if genre_lower in genres_str or genre_lower.replace('-', '') in genres_str.replace('-', ''):
@@ -354,18 +360,24 @@ def get_movies_by_genre(genre):
                     score = 6.0 + ((actors_count * 0.5 + has_director * 2) / 10.0)
                     score = min(9.5, max(6.0, score))
                     
-                    movies.append({
+                    movie_dict = {
                         'title': str(row.get('movie_title', 'Unknown')),
                         'rating': round(score, 1),
                         'source': 'Database'
-                    })
+                    }
+                    movies.append(movie_dict)
+        else:
+            logger.warning(f"[v0] Data not loaded or no genres column")
         
         # Sort by rating descending
         movies_sorted = sorted(movies, key=lambda x: x['rating'], reverse=True)[:20]
-        logger.info(f"Retrieved {len(movies_sorted)} movies for genre: {genre}")
-        return jsonify({'genre': genre, 'movies': movies_sorted})
+        logger.info(f"[v0] Retrieved {len(movies_sorted)} movies for genre: {genre}")
+        logger.info(f"[v0] First movie: {movies_sorted[0] if movies_sorted else 'None'}")
+        result = {'genre': genre, 'movies': movies_sorted, 'source': 'Database'}
+        logger.info(f"[v0] Response movies count: {len(result['movies'])}")
+        return jsonify(result)
     except Exception as e:
-        logger.error(f"Error getting movies by genre: {str(e)}", exc_info=True)
+        logger.error(f"[v0] Error getting movies by genre: {str(e)}", exc_info=True)
         return jsonify({'movies': [], 'genre': genre}), 200
 
 @app.route("/api/movie-summary", methods=["POST"])
